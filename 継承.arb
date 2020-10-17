@@ -1,0 +1,189 @@
+マウンテンバイク、ロードバイク両方に対応できるクラスにしたい！！
+
+
+間違って抽象クラスにnewメッセージを送ると、NotImplementedErrorがあがる仕組み
+bike = Bicycle.new(
+    size: 'M',
+    tape_color: 'red'
+)
+
+bike.size
+bike.spares
+
+
+
+
+
+下のコードを作成してみた！
+しかし、サブクラスのsuper呼び出しにより、親クラスのことを知った上で行動するという、
+結合関係が生まれている。
+サブクラスがsuperを呼び出し忘れると、不完全なインスタンスが作成されてしまう。
+class Bicycle
+    attr_reader :size, :chain, :tire_size
+
+
+    def initialize(args={})
+        @size = args[:size]
+        @chain = args[:chain] || default_chain
+        @tire_size = args[:tire_size] || default_tire_size
+
+    end
+
+    def spares
+        {
+            tire_size: '23',
+            chain: chain
+        }
+    end
+
+    def default_chain
+        '10-speed'
+    end
+
+    def default_tire_size
+        raise NotImplementedError
+    end
+
+end
+
+
+
+class LoadBile < Bicycle
+    attr_reader :tape_color
+
+
+    def initialize(args)
+        @tape_color = args[:tape_color]
+        super(args)
+    end
+
+    def spares
+        super.merge({tape_color: tape_color})
+    end
+
+    def default_tire_size
+        '23'
+    end
+end
+
+
+class MountainBile < Bicycle
+    attr_reader :front_shock, :rear_shock
+
+
+    def initialize(args)
+        @front_shock = args[:front_shock]
+        @rear_shock = args[:rear_shock]
+        super(args)
+    end
+
+    def spares
+        super.merge({front_shock: front_shock})
+    end
+
+    def default_tire_size
+        '2.1'
+    end
+end
+
+
+
+依存を取り除くため、superを使わないようにする
+下記のように、親クラスに付け足したければ付け足せばよい　というメソッドを定義することで、
+superは使わなくてよくなる、代わりにフックメソッドを定義する
+
+
+
+class Bicycle
+    attr_reader :size, :chain, :tire_size
+
+
+    def initialize(args={})
+        @size = args[:size]
+        @chain = args[:chain] || default_chain
+        @tire_size = args[:tire_size] || default_tire_size
+
+        post_initialize(args) #使いたかったら使えばいい　 #フックメソッドを定義
+
+    end
+
+    def post_initialize(args) 
+        nil #サブクラスがこのメソッドを定義しない場合、nilとなる
+    end
+
+    def spares
+        {
+            tire_size: '23',
+            chain: chain
+        }.mearge(local_spares)
+    end
+
+    def local_spares #フックメソッドを定義
+        {}
+    end
+
+    def default_chain
+        '10-speed'
+    end
+
+    def default_tire_size
+        raise NotImplementedError
+    end
+
+end
+
+class LoadBile < Bicycle
+    attr_reader :tape_color
+
+
+    def post_initialize(args)
+        @tape_color = args[:tape_color]#LoadBike自身は使われるタイミングはわからないが、使いたかったら使えばいい 親クラスのinitialize実行されるのだから
+    end
+
+    def local_spares
+        {tape_color: tape_color} #親クラスのlocal_sparesのハッシュ値に何か付け足したければ、追加すればよい
+    end
+
+    def default_tire_size
+        '23'
+    end
+end
+
+class MountainBile < Bicycle
+    attr_reader :front_shock, :rear_shock
+
+
+    def initialize(args)
+        @front_shock = args[:front_shock]
+        @rear_shock = args[:rear_shock]
+        super(args)
+    end
+
+    def local_spares
+        {rear_shock,:rear_shock}
+    end
+
+    def default_tire_size
+        '2.1'
+    end
+end
+
+class RecumbentBile < Bicycle
+    attr_reader :flag
+
+    def post_initialize(args)
+        @flag = args[:flag]
+    end
+
+    def local_spares
+        {flag: flag}
+    end
+
+    def default_tire_size
+        '28'
+    end    
+end
+
+
+bent = RecumbentBile.new(flag:'tail and orange')
+brnt.spares #親クラスのsparesが呼び出され、サブクラスのlocal_sparesが使われる

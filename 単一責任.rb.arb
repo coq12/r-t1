@@ -1,0 +1,51 @@
+#単一責任にすることで、変更、再利用しやすいプログラムにする。
+#一つのデータ構造の修正が全体に波及しない
+
+class revealingRefernces
+    attr_reader :wheels
+
+    def initialize(data)
+        #@から始まる変数はインスタンス変数
+        @wheels = wheelify(data)
+        @ratio = 1.0
+    end
+
+
+    # 渡されてくる配列の内部構造に関する知識がまとまっている
+    # 外部から受け取ったデータ構造を受け取る専用のメソッド
+    Wheel = Struct.new(:rim,:tire)
+    def wheelify(data)
+        data.collect{|cell|
+            Wheel.new(cell[0], cell[1])
+        }
+    }
+
+    #配列の内部構造に関する知識は全くない
+    #しかし、繰り返しする、という責任と、計算するという責任、２つの責任があるため、
+    #下記のように分離する
+#    def diameters
+#        wheels.collect{|wheel|
+#            wheel.rim + (wheel.tire*2)
+#        }
+#    end
+    def diameters
+        wheels.collect{|wheel|
+            diameter(wheel)
+        }
+    end
+    
+    #diameter専用のメソッドができたことで下記のようなメソッドを作成できるようになった
+    def diameter
+        wheel.rim + (wheel.tire*2)
+    end
+
+    #
+    def gear_inches
+        ratio*diameter
+    end
+
+end
+
+
+r=revealingRefernces.new(1,2)
+r.diameters

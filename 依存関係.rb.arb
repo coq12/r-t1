@@ -1,0 +1,39 @@
+#単一責任にすることで、変更、再利用しやすいプログラムにする。
+#一つのデータ構造の修正が全体に波及しない
+
+class Gear
+    attr_reader :chainring,:cog,:rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        #@から始まる変数はインスタンス変数
+        @chainring = chainring
+        @cog = cog
+        @rim = rim
+        @tire = tire
+    end
+
+    def ratio
+        chainring / cog.to_f
+    end
+
+    def gear_inches
+        ratio * Wheel.new(rim, tire).diameter
+    end
+end
+
+class Wheel
+    attr_reader :rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        @rim = rim
+        @tire = tire
+    end
+
+    def diameter
+        rim +(tire*2)
+    end
+
+end
+
+
+Gear.new(52,11,26,1.5).gear_inches

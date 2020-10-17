@@ -1,0 +1,30 @@
+class revealingRefernces
+    attr_reader :wheels
+
+    def initialize(data)
+        @wheels = wheelify(data)
+    end
+    Wheel = Struct.new(:rim,:tire)
+
+    # 渡されてくる配列の内部構造に関する知識がまとまっている
+    def wheelify(data)
+        data.collect{|cell|
+            Wheel.new(cell[0], cell[1])
+        }
+    }
+
+    #配列の内部構造に関する知識は全くない
+    def diameters
+        wheels.collect{|wheel|
+            wheel.rim + (wheel.tire*2)
+        }
+    end
+
+
+
+
+end
+
+
+r=revealingRefernces.new(1,2)
+r.diameters

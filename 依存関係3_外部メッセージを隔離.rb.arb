@@ -1,0 +1,54 @@
+#外部メッセージとは、self以外に送られるメッセージを指します。
+
+#gear_inchesでは、wheel.diameterが呼び出され、wheelインスタンスにメッセージを送っている
+#その場合、Gearインスタンスはwheelを持っている,且、wheelはdiameterメッセージに応答できることが必要
+
+
+class Gear
+    attr_reader :chainring,:cog,:wheel
+
+    def initialize(:chainring,:cog,:wheel)
+        #@から始まる変数はインスタンス変数
+        @chainring = chainring
+        @cog = cog
+        @wheel = wheel
+    end
+
+    def ratio
+        chainring / cog.to_f
+    end
+
+    #before
+    def gear_inches
+        ratio * wheel.diameter #diameterメッセージはWheelのインスタンスに対して送られる
+    end
+    ####
+
+    #after
+    def gear_inches
+        ratio * self.diameter #自分に対してのメッセージとなった
+    end
+
+    def diameter #wheelにdiameterがいることを知っているメソッドを別に定義
+        wheel.diameter
+    end
+    ####
+
+end
+
+class Wheel
+    attr_reader :rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        @rim = rim
+        @tire = tire
+    end
+
+    def diameter
+        rim +(tire*2)
+    end
+
+end
+
+
+Gear.new(52,11,Wheel.new(26,1.5)).gear_inches

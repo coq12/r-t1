@@ -1,0 +1,97 @@
+#GearクラスはWheelをクラス名そのもので参照しているため
+#問題点１Wheelの名前が変更された場合、なぜかGearクラスも修正しなければいけなくなる
+#問題点２Gearクラスのgear_inchesメソッドはWheelインスタンスのギアインチしか計算する意思がない
+
+##結果として、Gearがアクセスする必要があるのは、diameterメッセージに応答できるオブジェクトであるということ
+##結果として、GearがWheelを知っている必要はないということ
+
+
+#つまりGear自体がWheelクラスのインスタンスを持つ必要はなく、
+#WheelクラスのインスタンスはGearインスタンス作成時に、外部から注入すればよい
+#ear.new(52,11,Wheel.new(26,1.5)).gear_inches
+#「dependency_injection」
+
+#外部から注入できない場合、下記2種類の改善が考えられる
+#1.コンストラクタで注入する方法
+#2.インスタンスを作成するメソッドを定義する方法 def wheel {@wheel ||= Wheel.new(rim.tire)}
+
+#基本的に、依存するものは注入！を意識すること
+
+#下記が具体例
+
+##before
+class Gear
+    attr_reader :chainring,:cog,:rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        #@から始まる変数はインスタンス変数
+        @chainring = chainring
+        @cog = cog
+        @rim = rim
+        @tire = tire
+    end
+
+    def ratio
+        chainring / cog.to_f
+    end
+
+    def gear_inches
+        ratio * Wheel.new(rim, tire).diameter
+    end
+end
+
+class Wheel
+    attr_reader :rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        @rim = rim
+        @tire = tire
+    end
+
+    def diameter
+        rim +(tire*2)
+    end
+
+end
+
+
+Gear.new(52,11,26,1.5).gear_inches
+
+
+
+##after
+class Gear
+    attr_reader :chainring,:cog,:wheel
+
+    def initialize(:chainring,:cog,:wheel)
+        #@から始まる変数はインスタンス変数
+        @chainring = chainring
+        @cog = cog
+        @wheel = wheel
+    end
+
+    def ratio
+        chainring / cog.to_f
+    end
+
+    def gear_inches
+        ratio * wheel.diameter
+    end
+end
+
+class Wheel
+    attr_reader :rim,:tire
+
+    def initialize(:chainring,:cog,:rim,:tire)
+        @rim = rim
+        @tire = tire
+    end
+
+    def diameter
+        rim +(tire*2)
+    end
+
+end
+
+
+Gear.new(52,11,Wheel.new(26,1.5)).gear_inches
