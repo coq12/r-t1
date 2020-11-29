@@ -1,0 +1,87 @@
+Point = Struct.new(:x, :y)
+
+module Addable
+  def +(other)
+    self.class.new(x + other.x, y + other.y)
+  end
+end
+
+Point.include Addable
+p1 = Point.new(1, 2)
+p2 = Point.new(2, 3)
+
+p1 + p2
+#=> #<Point:.. @x=3, @y=5>
+
+
+------------------------
+class Point < Struct.new(:x, :y)
+  include Addable
+
+  def +(other)
+    puts "Enter Adder..."
+    super.tap { puts "Exit Adder..." }
+  end
+end
+
+
+
+
+---------
+
+module AdderDefiner
+    def define_adder(*keys)
+      define_method :+ do |other|
+        self.class.new(*(keys.map { |key| send(key) + other.send(key) }))
+      end
+    end
+end
+
+
+
+class LineItem < Struct.new(:amount, :tax)
+    extend AdderDefiner
+    define_adder(:amount, :tax)
+end
+
+
+l1 = LineItem.new(9.99, 1.50)
+l2 = LineItem.new(15.99, 2.40)
+
+l1 + l2
+
+
+
+--------
+moduleはModuleのインスタンスであることを利用する
+無名モジュールを定義して変数に代入
+
+
+
+module AdderIncluder
+    def define_adder(*keys)
+      adder = Module.new do
+        define_method :+ do |other|
+          self.class.new(*(keys.map { |key| send(key) + other.send(key) }))
+        end
+      end
+      include adder
+    end
+end
+
+class LineItem < Struct.new(:amount, :tax)
+    extend AdderDefiner
+    define_adder(:amount, :tax)
+
+    def +(other)
+        puts "Enter Adder..."
+        super.tap { puts "Exit Adder..." }#superが存在することになる
+    end
+end
+
+
+
+l1 = LineItem.new(9.99, 1.50) #それぞれのインスタンスにmoduleがインクルードされる because moduleはModuleのインスタンスだから
+l2 = LineItem.new(15.99, 2.40)
+
+l1 + l2

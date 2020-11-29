@@ -1,0 +1,229 @@
+class Gear
+
+    attr_reader :chainring, :cog, :wheel, :observer
+
+    def initialize(args)
+
+        @observer = args[:observer]
+    end
+
+    def set_cog(new_cog)
+        @cog = new_cog
+        changed
+    end
+
+    def set_chainring(new_chainring)
+        @chainring = new_chainring
+        changed
+    end
+
+    def changed
+        observer.changed(chainring, cog)
+    end
+end
+
+class GearTest < MiniTest::Unit::TestCase
+
+    def setup
+        @observer = MiniTest::Mock.new
+        @gear = Gear.new(chainring: 52, cog: 11, observer: @observer)
+    end
+
+    def test_notifies_observers_when_cogs_change
+        @observer.expect(:changed, true, [52,27])
+        @gear.set_cog(27)
+        @observer.verify
+    end
+
+    def test_notifies_observers_when_chainrings_change
+        @observer.expect(:changed, true, [42,11])
+        @gear.set_chainring(42)
+        @observer.verify
+    end
+end
+
+
+
+class Mechanic
+    def prepare_trip(trip)
+        trip.bicycles.each{|bicycle|
+            prepare_bicycle(bicycle)        
+        }
+    end
+end
+
+class tripCoordinator
+    def prepare_trip(trip)
+        buy_food(trip.customers)
+    end
+end
+
+class Driver
+    def prepare_trip(trip)
+        vehicle = trip.vehicle
+        gas_up(vehicle)
+        fill_water_tank(vehicle)
+    end
+end
+
+Tripがここでは装備品を装備される側、インタフェース側
+class Trip
+    attr_reader :bicycle, :customers, :vehicle
+
+    def prepare(prepares)
+        prepares.each{|prepare|
+            prepare.prepare_trip(self)
+        end
+    end
+end
+
+
+
+
+##prepare_tripのロールを担える？　テスト
+module PrepareInterfaceTest
+    def test_implenents_the_prepare_interface
+        assert_respond_to(@object, :prepare_trip)
+    end
+end
+
+class MechanicTest < MiniTest::Unit::TestCase
+    include PrepareInterfaceTest
+
+    def setup
+        @mechanic = @object = Mechanic.new
+    end
+end
+
+class tripCoordinatorTest < MiniTest::Unit::TestCase
+    include PrepareInterfaceTest
+
+    def setup
+        @trip_coordinator = @object = TripCoordinator.new
+    end
+
+end
+
+class DriverTest < MiniTest::Unit::TestCase
+    include PrepareInterfaceTest
+
+    def setup
+        @driver = @object = Driver.new
+    end
+end
+
+
+DriverTest
+ PASS test_implenents_the_prepare_interface
+
+MechanicTest
+ PASS test_implenents_the_prepare_interface
+
+TripCoordinator
+ PASS test_implenents_the_prepare_interface
+
+
+
+
+ #Preparableのロールのテスト(Tripクラス（インタフェース）が使われている)
+ class TripTest < MiniTest::Unit::TestCase
+
+    def test_requests_trip_preparation
+        @mpreparer = MiniTest::Mock.new
+        @trip = Trip.new
+
+        #メソッド名, 返り値, 引数
+        #prepare_tripというメソッドを持ち、引数を受け取り、nilを返すモックとする
+        @mpreparer.expect(:prepare_trip, nil, [@trip])
+
+        @trip.prepare([@mpreparer])
+
+        @mpreparer.verify
+    end
+end
+
+
+
+
+---------------------------------
+
+#wheelはdiameterメッセージを受け取る
+#メッセージを受け取るほうは依存されている
+#何かに依存されていないメッセージは存在してはならない
+#Wheelはdiameterメッセージを受信できなければならない->diametableで無ければならない
+class Wheel
+    attr_reader :rim, :tire
+    def initialize(rim, tire)
+        @rim = rim
+        @tire = tire
+    end
+
+    def diameter#ここがwidthに変わってしまった場合もテストが通るようにしたい。
+        rim +(tire *2)
+    end
+end
+
+#GearはWheelのdiameterメッセージを送信する
+#メッセージを送信する側は依存されていない
+class Gear
+    #ここでwheelクラスをオブジェクトを注入するか、
+    #diameterメッセージを受信できる何かのオブジェクト（diameterizable）を注入するか
+    #diameterizableを注入したほうが汎用性高いよね、というか、
+    #wheelが注入された場合、wheelがdiameter受信できるっていう情報、だれも知らないよね。
+    #テストするときは、wheelではなく、フェイクオブジェクトを使おう
+    attr_reader :chainring, :cog, :wheel
+
+    def gear_inches
+        ratio * wheel.diameter
+    end
+end
+
+
+#@objectがdiameterizableであることをテストするためのモジュール
+module DiameterizableInterfaceTest
+    def test_implenents_the_prepare_interface
+        assert_respond_to(@object, :diameter)
+    end
+end
+
+
+#Wheelはdiameterizableであることをテストできる
+#diameterizableインタフェースはdiameterメッセージを受信する必要があることをテストできる
+class WheelTest < MiniTest::Unit::TestCase
+    include DiameterizableInterfaceTest
+
+    def setup
+        @wheel = @object = Wheel.new(26, 1.5)
+    end
+
+    def test_calculates_diameter
+
+    end
+end
+
+
+#Diameterizableのロールを担うフェイクオブジェクト
+class diameterDouble
+    def diameter #1.　例えば、このメソッドがwidthというメソッドに変更された場合
+        10
+    end
+end
+
+#DiameterDoubleがdiameterを持っていること（diameterizableである）をテストできる
+class DiameterDoubleTest < MiniTest::Unit::TestCase
+    include DiameterizableInterfaceTest
+
+    def setup
+        @object = DiameterDouble.new
+    end
+end
+
+#3. gear_inchesが正しい結果を返すことをテストする
+class GearTest < MiniTest::Unit::TestCase
+    def test_calculates_gear_inches
+
+        #diameterメッセージをもつwheelではなく、フェイクオブジェクトを注入
+        gear = Gear.new(chainring: 52, cog: 11, wheel: DiameterDouble.new)
+        assert_in_delta(47.27, gear.gear_inches, 0.01)
+    end
+end

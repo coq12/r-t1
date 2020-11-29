@@ -76,7 +76,7 @@ end
 #prepareの引数は準備する者であり、クラスはどうでもいい
 
 
-
+#Preparable
 class Trip
     attr_reader :bicycles, :customers, :vehicle
 
@@ -96,6 +96,8 @@ Tripクラスのインスタンスを基（self）として、
 下のprepareクラスたちが装備品をつけてくれる。
 装備品は、各インスタンス変数に施されたり
 
+
+#Preparer
 #preparesの配列の中に入るインスタンスのクラスたち
 class Mechanic
     def prepare_trip(trip)
@@ -121,3 +123,108 @@ class Driver
 end
 
 
+
+
+----------------------------------------------------------------
+class Schedule
+    def scheduled?(schedulable, start_date, end_date)
+        puts "This #{schedulable.class}" + "is not scheduled\n" + 
+             "between #{start_date} and #{end_date}"
+        false
+    end
+end
+
+class Bicycle
+    attr_reader :schedule, :size, :chain, :tire_size
+
+    def initialize(args={})
+        @schedule = args[:schedule]||Schedule.new
+    end
+
+    def schedulable?(start_date,end_date)
+        !scheduled?(start_date - lead_days, end_date)
+    end
+
+    def scheduled?(start_date, end_date)
+        schedule.scheduled?(self, start_date,end_date)
+    end
+
+    def lead_days
+        1
+    end
+
+end
+
+
+#インスタンスはScheduleの存在を知らなくてよい
+b=Bicycle.new
+b.schedulable?
+
+
+
+#上のコードはBicycleがScheduleに依存している
+#Scheduleへの依存をBicycleから取り除き、Schedulableモジュールに移動されています。
+#継承とは異なり、ふるまいをオブジェクトに与える、つまりのように振る舞う behaves-like-a
+
+class Schedule
+    def scheduled?(schedulable, start_date, end_date)
+        puts "This #{schedulable.class}" + "is not scheduled\n" + 
+             "between #{start_date} and #{end_date}"
+        false
+    end
+end
+
+#モジュールによってモジュールにロールを与える。
+#Scheduleへの依存はこのロール内に限定される
+Module Schedulable
+    attr_writer :schedule
+
+    def schedule
+        @schedule ||=::Schedule.new
+    end
+
+    def schedulable?(start_date,end_date)
+        !scheduled?(start_date - lead_days, end_date)
+    end
+
+    def scheduled?(start_date, end_date)
+        schedule.scheduled?(self, start_date,end_date)
+    end
+
+    def lead_days
+        0
+    end
+
+end
+
+class Bicycle
+    include Schedulable
+
+    def lead_days
+        2
+    end
+
+end
+
+class Vehicle
+    include Schedulable
+
+    def lead_days
+        3
+    end
+
+end
+
+class Mechanic
+    include Schedulable
+
+    def lead_days
+        4
+    end
+
+end
+
+
+
+b = Bicycle.new
+b.schedulable?(string, ending)

@@ -1,0 +1,184 @@
+継承されたインタフェースの単体テスト
+
+
+class Bicycle
+    attr_reader :size, :chain, :tire_size
+
+    def initialize(args={})
+        @size = args[:size]
+        @chain = args[:chain] || default_chain
+        @tire_size = args[:tire_size] || default_tire_size
+        post_initialize(args)
+    end
+
+    def spares
+        {tire_size: tire_size,chain: chain}.merge(local_spares)
+    end
+
+    def default_tire_size
+        raise NotImprementedError
+    end
+
+
+    def post_initialize(args)
+        nil
+    end
+
+    def local_spares
+        {}
+    end
+
+    def default_chain
+        '10-speed'
+    end
+end
+
+
+class RoadBile < Bicycle
+    attr_reader :tape_color
+
+    def post_initialize
+        @tape_color = args[:tape_color]
+    end
+
+    def local_spares
+        {tape_color: tape_color}
+    end
+
+    def default_tire_size
+        '23'
+    end
+end
+
+
+#Bicycleのように振る舞えるように、
+#Bicycleが応答できるべきメソッドすべてに応答できるかチェックしている
+#このインタフェースを満たせば、Bicycleのように振る舞える
+module BicycleInterfaceTest
+    def test_responds_to_default_tire_size
+        assert_respond_to(@object, :default_tire_size)
+    end
+
+    def test_responds_to_default_chain
+        assert_respond_to(@object, :default_chain)
+    end
+
+    def test_responds_to_chain
+        assert_respond_to(@object, :chain)
+    end
+
+    def test_responds_to_size
+        assert_respond_to(@object, :size)
+    end
+
+    def test_responds_to_tire_size
+        assert_respond_to(@object, :tire_size)
+    end
+
+    def test_responds_to_spares
+        assert_respond_to(@object, :spares)
+    end
+end
+
+
+#親クラスのテスト　１
+class BicycleTest < MiniTest::Unit::TestCase
+    include BicycleInterfaceTest
+
+    def setup
+        @bike = @object = Bicycle.new({tire_size:0})
+    end
+
+    #インスタンス化されないはずのBycycleをあえてインスタンス化しているめ、
+    #発生すべきエラーをテストする
+    def test_forces_subclasses_to_implement_default_tire_size
+        assert_raises(NotImprementedError){@bike.default_tire_size}
+    end
+end
+
+
+
+
+#サブクラスの振る舞いを確認するインタフェース
+module BicycleSubclassTest
+    def test_responds_to(@object, :post_initialize)
+        assert_respond_to(@object, :post_initialize)
+    end
+
+    def test_responds_to_local_spares
+        assert_respond_to(@object, :local_spares)
+    end
+
+    #tire_sizeだけは実装していないと親クラスでエラーとなる
+    def test_responds_to_default_tire_size
+        
+        assert_respond_to(@object, :default_tire_size)
+    end
+end
+
+
+#サブクラスのテスト
+class RoadBikeTest < MiniTest
+    include BicycleInterfaceTest
+    include BicycleSubclassTest
+
+    def setup
+        #親クラスのinitializeにて、post_initializeが呼ばれ、
+        #overwrideされた子クラスのpost_initializeが実行される
+        @bike = @object = RoadBike.new(tape_color :'red')
+    end
+
+    def test_puts_ttape_color_in_local_spares
+        assert_equal 'red' @bike.local_spares[:tape_color]
+    end
+end
+
+
+#子クラスのスタブを用意して親クラスのテスト
+#親クラスのテスト、親クラスと子クラスの連携のテストを同時に実行できる
+#親クラスのてすと　１より優秀
+
+class StubbedBike < Bicycle
+    def default_tire_size
+        0
+    end
+
+    def local_spares
+        {saddle: 'painful'}
+    end
+end
+
+classs BicycleTest < MiniTest::Unit::TestCase
+    include BicycleInterfaceTest
+
+    @bikeはこのクラスで使用するための変数
+    @objectはインタフェーステスト用の変数
+    def setup
+        @bike = @object = Bicycle.new({tire_size:0})
+        @stubbed_bike = StubbedBike.new
+    end
+
+    #インスタンス化されないはずのBycycleをあえてインスタンス化しているめ、
+    #発生すべきエラーをテストする
+    def test_forces_subclasses_to_implement_default_tire_size
+        assert_raises(NotImprementedError){@bike.default_tire_size}
+    end
+
+    def test_includes_local_spares_in_spares
+        assert_equal @stubbed_bike.spares,{tire_size:0, chain: '10-speed', saddle: 'painful'}
+    end
+end
+
+#上のテストはStubが最新の状態出ないと効果を発揮しない。
+#StubbedBikeが子クラスとしての機能を実装していることを担保するためにStub用のテストを実行する
+class StubbedBikeTest < MiniTest::Unit::TestCase
+    include BicycleSubclassTest
+
+    def setup
+        @object = StubbedBike.new
+    end
+end
+
+
+#全体的なポイント
+#サブクラスの特化をテストするときに、スーパークラスの知識が、サブクラスのテストに漏れないように
