@@ -423,7 +423,42 @@ road_config = [['chain', '10-speed'],['tire_size', '23'],['type_color', 'red']]
 road_bike = Bicycle.new(size: 'L', parts: PartsFactory.build(road_config))
 
 
+road_config = [['chain','10-speed'],['tire_size', '23'],['type_color', 'red']]
+road_bike =Bicycle.new(size:'L', parts: PartsFactory.build(road_config))
 
+class Bicycle
+    attr_reader size:, parts:
+
+    def initialize(arts={})
+        @size = args[:size]
+        @parts = args[:parts]
+    end
+
+    def spares
+        parts.spares
+    end
+
+end
+
+class Parts
+
+    def initialize(parts)
+        @parts = parts
+    end
+
+    def spares
+        parts.select {|parts|part.need_spares}
+    end
+end
+
+module PartsFactory
+    def self.build(config, parts_class = Parts)
+        parts_class.new(
+            conifg.collect{|part_config|OpenStruct.new(name:,description:,need_spares: part_config.fetch(2,true))}
+
+        )
+    end
+end
 
 
 
